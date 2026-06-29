@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>💕 女朋友体重记录</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #e8919a;
+            --primary-light: #fce4ec;
+            --primary-dark: #c95b66;
+            --bg: #fef6f7;
+            --card: #ffffff;
+            --text: #4a3033;
+            --text-secondary: #8a6c70;
+            --border: #f0d6da;
+            --shadow: 0 2px 12px rgba(232, 145, 154, 0.15);
+            --radius: 16px;
+            --green: #66bb6a;
+            --red: #e53935;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .header {
+            background: linear-gradient(135deg, #f5c6cb, var(--primary));
+            padding: 28px 20px 24px;
+            text-align: center;
+            color: #fff;
+            border-radius: 0 0 28px 28px;
+            box-shadow: 0 4px 16px rgba(232, 145, 154, 0.25);
+            position: relative;
+        }
+        .header h1 { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+        .header p { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+        .server-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.25);
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            margin-top: 6px;
+        }
+        .tabs {
+            display: flex;
+            margin: -16px 16px 0;
+            position: relative;
+            z-index: 2;
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            padding: 4px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px 8px;
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 12px;
+            transition: all 0.25s ease;
+        }
+        .tab-btn:hover { background: var(--primary-light); }
+        .tab-btn.active {
+            background: linear-gradient(135deg, var(--primary), #ec9ca5);
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(232, 145, 154, 0.3);
+        }
+        .tab-btn .tab-icon { margin-right: 4px; }
+        .container { max-width: 600px; margin: 0 auto; padding: 16px; }
+        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .card {
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 20px;
+            margin-top: 16px;
+        }
+        .card-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+        .form-group input {
+            width: 100%; padding: 12px 14px;
+            border: 2px solid var(--border); border-radius: 12px;
+            font-size: 16px; color: var(--text); background: #fefafb;
+            transition: border-color 0.2s, box-shadow 0.2s; outline: none;
+        }
+        .form-group input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(232, 145, 154, 0.15);
+        }
+        .form-group input[type="number"] { -moz-appearance: textfield; }
+        .form-group input[type="number"]::-webkit-outer-spin-button,
+        .form-group input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .weight-input-wrap { display: flex; align-items: center; gap: 8px; }
+        .weight-input-wrap input { flex: 1; }
+        .weight-unit { font-size: 16px; font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
+        .btn {
+            width: 100%; padding: 14px; border: none; border-radius: 12px;
+            font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), #ec9ca5);
+            color: #fff; box-shadow: 0 4px 12px rgba(232, 145, 154, 0.3);
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(232, 145, 154, 0.4); }
+        .btn-primary:active { transform: translateY(0); }
+        .btn-sm { padding: 6px 12px; font-size: 12px; width: auto; border-radius: 8px; }
+        .btn-danger { background: #fff0f0; color: var(--red); border: 1px solid #ffd0d0; }
+        .btn-danger:hover { background: var(--red); color: #fff; }
+        .records-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .records-header .badge { background: var(--primary-light); color: var(--primary-dark); padding: 2px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .record-list { max-height: 400px; overflow-y: auto; }
+        .record-list::-webkit-scrollbar { width: 4px; }
+        .record-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        .record-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 0; border-bottom: 1px solid #f5edef;
+        }
+        .record-item:last-child { border-bottom: none; }
+        .record-date { font-size: 14px; font-weight: 500; min-width: 100px; }
+        .record-date .weekday { font-size: 12px; color: var(--text-secondary); margin-left: 6px; }
+        .record-weight { font-size: 18px; font-weight: 700; color: var(--primary-dark); }
+        .record-weight .unit { font-size: 13px; font-weight: 400; color: var(--text-secondary); }
+        .record-actions { display: flex; gap: 6px; }
+        .record-actions button { background: none; border: none; cursor: pointer; font-size: 16px; padding: 4px 6px; border-radius: 6px; transition: background 0.2s; }
+        .record-actions .del-btn:hover { background: #ffe0e0; }
+        .record-actions .edit-btn:hover { background: #e0f0ff; }
+        .empty-state { text-align: center; padding: 40px 20px; color: var(--text-secondary); }
+        .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+        .empty-state p { font-size: 14px; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px; margin-bottom: 20px;
+        }
+        .stat-item { text-align: center; padding: 14px 10px; border-radius: 12px; background: #fefafb; border: 1px solid var(--border); }
+        .stat-item .stat-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+        .stat-item .stat-value { font-size: 20px; font-weight: 700; }
+        .stat-item .stat-value.up { color: var(--red); }
+        .stat-item .stat-value.down { color: var(--green); }
+        .stat-item .stat-value.flat { color: var(--text); }
+        .stat-item .stat-change { font-size: 12px; margin-top: 2px; }
+        .chart-wrap { position: relative; height: 240px; }
+        .chart-wrap canvas { width: 100% !important; height: 100% !important; }
+        .toast {
+            position: fixed; top: 20px; left: 50%;
+            transform: translateX(-50%) translateY(-80px);
+            background: #323232; color: #fff;
+            padding: 12px 24px; border-radius: 12px;
+            font-size: 14px; font-weight: 500;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 999; pointer-events: none; opacity: 0;
+            max-width: 80vw; text-align: center;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 100; align-items: center; justify-content: center; padding: 24px; }
+        .modal-overlay.show { display: flex; }
+        .modal { background: var(--card); border-radius: var(--radius); padding: 24px; width: 100%; max-width: 360px; box-shadow: 0 8px 40px rgba(0,0,0,0.15); }
+        .modal h3 { font-size: 18px; margin-bottom: 16px; }
+        .modal .btn-row { display: flex; gap: 10px; margin-top: 16px; }
+        .modal .btn-row .btn { flex: 1; padding: 12px; }
+        .btn-secondary { background: #f0e6e8; color: var(--text); }
+        .btn-secondary:hover { background: #e5d8db; }
+        .period-selector { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+        .period-selector select, .period-selector input {
+            padding: 8px 12px; border: 2px solid var(--border); border-radius: 10px;
+            font-size: 14px; color: var(--text); background: #fefafb; outline: none;
+        }
+        .period-selector select:focus, .period-selector input:focus { border-color: var(--primary); }
+        @media (max-width: 400px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .header h1 { font-size: 18px; }
+        }
+        .loading { text-align: center; padding: 20px; color: var(--text-secondary); }
+        .loading .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 8px; vertical-align: middle; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>💕 女朋友体重记录</h1>
+        <p>每天记录 · 用心关注</p>
+        <div class="server-badge">🖥️ 数据已同步</div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="tab-input">
+            <span class="tab-icon">📝</span> 填写
+        </button>
+        <button class="tab-btn" data-tab="tab-weekly">
+            <span class="tab-icon">📊</span> 周报
+        </button>
+        <button class="tab-btn" data-tab="tab-monthly">
+            <span class="tab-icon">📈</span> 月报
+        </button>
+    </div>
+
+    <div class="container">
+
+        <!-- ===== Tab: Input ===== -->
+        <div class="tab-content active" id="tab-input">
+            <div class="card">
+                <div class="card-title">📝 记录今日体重</div>
+                <div class="form-group">
+                    <label>📅 日期</label>
+                    <input type="date" id="record-date">
+                </div>
+                <div class="form-group">
+                    <label>⚖️ 体重</label>
+                    <div class="weight-input-wrap">
+                        <input type="number" id="record-weight" placeholder="请输入体重" step="0.1" min="30" max="200">
+                        <span class="weight-unit">kg</span>
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="save-btn">💾 保存记录</button>
+            </div>
+
+            <div class="card">
+                <div class="records-header">
+                    <span class="card-title">📋 历史记录</span>
+                    <span class="badge" id="record-count">0 条</span>
+                </div>
+                <div id="loading-records" class="loading" style="display:none;">
+                    <span class="spinner"></span>加载中...
+                </div>
+                <div class="record-list" id="record-list">
+                    <div class="empty-state">
+                        <div class="empty-icon">📭</div>
+                        <p>还没有体重记录</p>
+                        <p style="font-size:12px;margin-top:4px;">快去记录第一条吧！</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== Tab: Weekly ===== -->
+        <div class="tab-content" id="tab-weekly">
+            <div class="card">
+                <div class="card-title">📊 本周体重趋势</div>
+                <div id="weekly-loading" class="loading" style="display:none;">
+                    <span class="spinner"></span>加载中...
+                </div>
+                <div id="weekly-empty" class="empty-state">
+                    <div class="empty-icon">📊</div>
+                    <p>本周暂无数据</p>
+                </div>
+                <div class="stats-grid" id="weekly-stats"></div>
+                <div class="chart-wrap" id="weekly-chart-wrap" style="display:none;">
+                    <canvas id="weekly-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== Tab: Monthly ===== -->
+        <div class="tab-content" id="tab-monthly">
+            <div class="card">
+                <div class="card-title">📈 月度体重分析</div>
+                <div class="period-selector">
+                    <select id="month-select"></select>
+                </div>
+                <div id="monthly-loading" class="loading" style="display:none;">
+                    <span class="spinner"></span>加载中...
+                </div>
+                <div id="monthly-empty" class="empty-state">
+                    <div class="empty-icon">📈</div>
+                    <p>该月暂无数据</p>
+                </div>
+                <div class="stats-grid" id="monthly-stats"></div>
+                <div class="chart-wrap" id="monthly-chart-wrap" style="display:none;">
+                    <canvas id="monthly-chart"></canvas>
+                </div>
+            </div>
+            <div class="card" id="monthly-summary-card" style="display:none;">
+                <div class="card-title">📋 月度小结</div>
+                <div id="monthly-summary"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <div class="modal-overlay" id="edit-modal">
+        <div class="modal">
+            <h3>✏️ 编辑记录</h3>
+            <div class="form-group">
+                <label>📅 日期</label>
+                <input type="date" id="edit-date">
+            </div>
+            <div class="form-group">
+                <label>⚖️ 体重 (kg)</label>
+                <input type="number" id="edit-weight" step="0.1" min="30" max="200">
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-secondary" id="edit-cancel">取消</button>
+                <button class="btn btn-primary" id="edit-save">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =============================================
+        // API Layer
+        // =============================================
+        const API_BASE = '';
+
+        async function apiGet(path) {
+            const res = await fetch(API_BASE + path);
+            const json = await res.json();
+            if (!json.success) throw new Error(json.message);
+            return json.data;
+        }
+
+        async function apiPost(path, body) {
+            const res = await fetch(API_BASE + path, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.message);
+            return json;
+        }
+
+        async function apiPut(path, body) {
+            const res = await fetch(API_BASE + path, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.message);
+            return json;
+        }
+
+        async function apiDelete(path) {
+            const res = await fetch(API_BASE + path, { method: 'DELETE' });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.message);
+            return json;
+        }
+
+        // =============================================
+        // Data
+        // =============================================
+        const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
+
+        function formatDate(dateStr) {
+            const d = new Date(dateStr + 'T00:00:00');
+            return `${d.getMonth() + 1}月${d.getDate()}日 周${WEEKDAYS[d.getDay()]}`;
+        }
+
+        function getMonday(dateStr) {
+            const d = new Date(dateStr + 'T00:00:00');
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            const monday = new Date(d);
+            monday.setDate(diff);
+            return monday.toISOString().slice(0, 10);
+        }
+
+        function getSunday(dateStr) {
+            const d = new Date(dateStr + 'T00:00:00');
+            const day = d.getDay();
+            const diff = d.getDate() + (day === 0 ? 0 : 7 - day);
+            const sunday = new Date(d);
+            sunday.setDate(diff);
+            return sunday.toISOString().slice(0, 10);
+        }
+
+        function getDaysInMonth(year, month) {
+            return new Date(year, month, 0).getDate();
+        }
+
+        function calcStats(weights) {
+            if (!weights.length) return null;
+            const sorted = [...weights].sort((a, b) => a - b);
+            const sum = sorted.reduce((s, v) => s + v, 0);
+            const avg = sum / sorted.length;
+            const min = sorted[0];
+            const max = sorted[sorted.length - 1];
+            const first = weights[0];
+            const last = weights[weights.length - 1];
+            const change = last - first;
+            return { avg, min, max, first, last, change, count: weights.length };
+        }
+
+        function getWeightChange(date, records) {
+            const idx = records.findIndex(r => r.date === date);
+            if (idx <= 0) return null;
+            return records[idx].weight - records[idx - 1].weight;
+        }
+
+        function showToast(msg) {
+            const el = document.getElementById('toast');
+            el.textContent = msg;
+            el.classList.add('show');
+            clearTimeout(el._timer);
+            el._timer = setTimeout(() => el.classList.remove('show'), 2200);
+        }
+
+        // =============================================
+        // State
+        // =============================================
+        let records = [];
+        let charts = { weekly: null, monthly: null };
+
+        async function loadRecords() {
+            records = await apiGet('/api/records');
+            return records;
+        }
+
+        // =============================================
+        // Render: Record List
+        // =============================================
+        function renderRecords() {
+            const container = document.getElementById('record-list');
+            const countEl = document.getElementById('record-count');
+            countEl.textContent = `${records.length} 条`;
+
+            if (records.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📭</div>
+                        <p>还没有体重记录</p>
+                        <p style="font-size:12px;margin-top:4px;">快去记录第一条吧！</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const reversed = [...records].reverse();
+            container.innerHTML = reversed.map(r => {
+                const change = getWeightChange(r.date, records);
+                const arrow = change !== null ? (change > 0 ? '↑' : change < 0 ? '↓' : '→') : '';
+                return `
+                    <div class="record-item">
+                        <div class="record-date">
+                            ${formatDate(r.date)}
+                            <span class="weekday">${change !== null ? `${arrow} ${change >= 0 ? '+' : ''}${change.toFixed(1)}` : ''}</span>
+                        </div>
+                        <div class="record-weight">
+                            ${r.weight} <span class="unit">kg</span>
+                        </div>
+                        <div class="record-actions">
+                            <button class="edit-btn" data-date="${r.date}" title="编辑">✏️</button>
+                            <button class="del-btn" data-date="${r.date}" title="删除">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.querySelectorAll('.del-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const date = btn.dataset.date;
+                    if (confirm(`确定删除 ${formatDate(date)} 的记录吗？`)) {
+                        try {
+                            await apiDelete(`/api/records/${date}`);
+                            await refreshAll();
+                            showToast('✅ 已删除');
+                        } catch (e) {
+                            showToast('❌ ' + e.message);
+                        }
+                    }
+                });
+            });
+
+            container.querySelectorAll('.edit-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    openEditModal(btn.dataset.date);
+                });
+            });
+        }
+
+        // =============================================
+        // Edit Modal
+        // =============================================
+        let editingDate = null;
+
+        function openEditModal(date) {
+            const record = records.find(r => r.date === date);
+            if (!record) return;
+            editingDate = date;
+            document.getElementById('edit-date').value = date;
+            document.getElementById('edit-weight').value = record.weight;
+            document.getElementById('edit-modal').classList.add('show');
+        }
+
+        document.getElementById('edit-cancel').addEventListener('click', () => {
+            document.getElementById('edit-modal').classList.remove('show');
+            editingDate = null;
+        });
+
+        document.getElementById('edit-modal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+                document.getElementById('edit-modal').classList.remove('show');
+                editingDate = null;
+            }
+        });
+
+        document.getElementById('edit-save').addEventListener('click', async () => {
+            const newDate = document.getElementById('edit-date').value;
+            const newWeight = parseFloat(document.getElementById('edit-weight').value);
+            if (!newDate) return showToast('❌ 请选择日期');
+            if (!newWeight || newWeight <= 0) return showToast('❌ 请输入有效体重');
+            try {
+                await apiPut(`/api/records/${editingDate}`, { date: newDate, weight: newWeight });
+                document.getElementById('edit-modal').classList.remove('show');
+                editingDate = null;
+                await refreshAll();
+                showToast('✅ 已更新');
+            } catch (e) {
+                showToast('❌ ' + e.message);
+            }
+        });
+
+        // =============================================
+        // Save
+        // =============================================
+        document.getElementById('save-btn').addEventListener('click', async () => {
+            const date = document.getElementById('record-date').value;
+            const weight = parseFloat(document.getElementById('record-weight').value);
+
+            if (!date) return showToast('❌ 请选择日期');
+            if (!weight || weight <= 0) return showToast('❌ 请输入有效体重');
+            if (weight < 30 || weight > 200) return showToast('❌ 体重范围应在 30~200 kg 之间');
+
+            try {
+                const result = await apiPost('/api/records', { date, weight });
+                await refreshAll();
+                showToast(result.isNew ? '✅ 记录成功！' : '✅ 已更新该日记录');
+                document.getElementById('record-weight').value = '';
+            } catch (e) {
+                showToast('❌ ' + e.message);
+            }
+        });
+
+        // =============================================
+        // Set default date
+        // =============================================
+        function setDefaultDate() {
+            const today = new Date();
+            document.getElementById('record-date').value = today.toISOString().slice(0, 10);
+        }
+
+        // =============================================
+        // Render: Weekly Report
+        // =============================================
+        function renderWeekly() {
+            const emptyEl = document.getElementById('weekly-empty');
+            const statsEl = document.getElementById('weekly-stats');
+            const chartWrap = document.getElementById('weekly-chart-wrap');
+
+            if (records.length === 0) {
+                emptyEl.style.display = 'block';
+                statsEl.innerHTML = '';
+                chartWrap.style.display = 'none';
+                return;
+            }
+
+            const today = new Date();
+            const todayStr = today.toISOString().slice(0, 10);
+            const monday = getMonday(todayStr);
+            const sunday = getSunday(todayStr);
+
+            const weekRecords = records.filter(r => r.date >= monday && r.date <= sunday)
+                                       .sort((a, b) => a.date.localeCompare(b.date));
+
+            if (weekRecords.length === 0) {
+                emptyEl.style.display = 'block';
+                statsEl.innerHTML = '';
+                chartWrap.style.display = 'none';
+                return;
+            }
+
+            emptyEl.style.display = 'none';
+
+            const weights = weekRecords.map(r => r.weight);
+            const stats = calcStats(weights);
+            const dates = weekRecords.map(r => {
+                const d = new Date(r.date + 'T00:00:00');
+                return `${d.getMonth()+1}/${d.getDate()}`;
+            });
+
+            const changeSign = stats.change > 0 ? '↑' : stats.change < 0 ? '↓' : '→';
+            const changeClass = stats.change > 0 ? 'up' : stats.change < 0 ? 'down' : 'flat';
+            statsEl.innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-label">📊 记录天数</div>
+                    <div class="stat-value">${stats.count} 天</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">⚖️ 平均</div>
+                    <div class="stat-value">${stats.avg.toFixed(1)}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">📉 最低</div>
+                    <div class="stat-value">${stats.min.toFixed(1)}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">📈 最高</div>
+                    <div class="stat-value">${stats.max.toFixed(1)}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">🔄 周变化</div>
+                    <div class="stat-value ${changeClass}">${changeSign} ${Math.abs(stats.change).toFixed(1)}</div>
+                    <div class="stat-change ${changeClass}">
+                        ${stats.change > 0 ? '增重' : stats.change < 0 ? '减重' : '持平'}
+                    </div>
+                </div>
+            `;
+
+            chartWrap.style.display = 'block';
+            if (charts.weekly) charts.weekly.destroy();
+
+            const ctx = document.getElementById('weekly-chart').getContext('2d');
+            const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+            gradient.addColorStop(0, 'rgba(232, 145, 154, 0.3)');
+            gradient.addColorStop(1, 'rgba(232, 145, 154, 0.02)');
+
+            charts.weekly = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: '体重 (kg)',
+                        data: weights,
+                        borderColor: '#e8919a',
+                        backgroundColor: gradient,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#e8919a',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        borderWidth: 2.5,
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(50,50,50,0.9)',
+                            padding: 10, cornerRadius: 8,
+                            callbacks: { label: ctx => `${ctx.parsed.y.toFixed(1)} kg` }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: false, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { callback: v => v.toFixed(1), font: { size: 11 } } },
+                        x: { grid: { display: false }, ticks: { font: { size: 11 } } }
+                    }
+                }
+            });
+        }
+
+        // =============================================
+        // Render: Monthly Report
+        // =============================================
+        function populateMonthSelect() {
+            const select = document.getElementById('month-select');
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth() + 1;
+            select.innerHTML = '';
+            for (let i = 0; i < 12; i++) {
+                let m = currentMonth - i;
+                let y = currentYear;
+                if (m <= 0) { m += 12; y -= 1; }
+                const label = `${y} 年 ${String(m).padStart(2, '0')} 月`;
+                const value = `${y}-${String(m).padStart(2, '0')}`;
+                const opt = document.createElement('option');
+                opt.value = value;
+                opt.textContent = label;
+                if (i === 0) opt.selected = true;
+                select.appendChild(opt);
+            }
+        }
+
+        function renderMonthly() {
+            const select = document.getElementById('month-select');
+            const [year, month] = select.value.split('-').map(Number);
+            const prefix = `${year}-${String(month).padStart(2, '0')}`;
+
+            const monthRecords = records.filter(r => r.date.startsWith(prefix))
+                                        .sort((a, b) => a.date.localeCompare(b.date));
+
+            const emptyEl = document.getElementById('monthly-empty');
+            const statsEl = document.getElementById('monthly-stats');
+            const chartWrap = document.getElementById('monthly-chart-wrap');
+            const summaryCard = document.getElementById('monthly-summary-card');
+            const summaryEl = document.getElementById('monthly-summary');
+
+            if (monthRecords.length === 0) {
+                emptyEl.style.display = 'block';
+                statsEl.innerHTML = '';
+                chartWrap.style.display = 'none';
+                summaryCard.style.display = 'none';
+                return;
+            }
+
+            emptyEl.style.display = 'none';
+
+            const weights = monthRecords.map(r => r.weight);
+            const stats = calcStats(weights);
+            const dates = monthRecords.map(r => {
+                const d = new Date(r.date + 'T00:00:00');
+                return `${d.getDate()}日(${WEEKDAYS[d.getDay()]})`;
+            });
+
+            const changeSign = stats.change > 0 ? '↑' : stats.change < 0 ? '↓' : '→';
+            const changeClass = stats.change > 0 ? 'up' : stats.change < 0 ? 'down' : 'flat';
+            statsEl.innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-label">📊 记录天数</div>
+                    <div class="stat-value">${stats.count} 天</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">⚖️ 月均</div>
+                    <div class="stat-value">${stats.avg.toFixed(1)}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">📉 最低</div>
+                    <div class="stat-value">${stats.min.toFixed(1)}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">📈 最高</div>
+                    <div class="stat-value">${stats.max.toFixed(1)}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">🔄 月变化</div>
+                    <div class="stat-value ${changeClass}">${changeSign} ${Math.abs(stats.change).toFixed(1)}</div>
+                    <div class="stat-change ${changeClass}">
+                        ${stats.change > 0 ? '增重' : stats.change < 0 ? '减重' : '持平'}
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">📏 波动范围</div>
+                    <div class="stat-value">${(stats.max - stats.min).toFixed(1)}</div>
+                </div>
+            `;
+
+            chartWrap.style.display = 'block';
+            if (charts.monthly) charts.monthly.destroy();
+
+            const ctx = document.getElementById('monthly-chart').getContext('2d');
+            const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+            gradient.addColorStop(0, 'rgba(106, 150, 220, 0.3)');
+            gradient.addColorStop(1, 'rgba(106, 150, 220, 0.02)');
+
+            charts.monthly = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [
+                        {
+                            label: '体重 (kg)',
+                            data: weights,
+                            borderColor: '#6a96dc',
+                            backgroundColor: gradient,
+                            fill: true, tension: 0.4,
+                            pointBackgroundColor: '#6a96dc',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointRadius: 5,
+                            pointHoverRadius: 7,
+                            borderWidth: 2.5,
+                        },
+                        {
+                            label: '月均线',
+                            data: Array(dates.length).fill(stats.avg),
+                            borderColor: 'rgba(232, 145, 154, 0.5)',
+                            borderDash: [5, 5],
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                            fill: false,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, position: 'top', labels: { font: { size: 11 }, usePointStyle: true, padding: 16 } },
+                        tooltip: { backgroundColor: 'rgba(50,50,50,0.9)', padding: 10, cornerRadius: 8, callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)} kg` } }
+                    },
+                    scales: {
+                        y: { beginAtZero: false, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { callback: v => v.toFixed(1), font: { size: 11 } } },
+                        x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 45 } }
+                    }
+                }
+            });
+
+            summaryCard.style.display = 'block';
+            const daysInMonth = getDaysInMonth(year, month);
+            const recordRate = (stats.count / daysInMonth * 100).toFixed(0);
+            const trend = stats.change > 0.5 ? '⚠️ 本月体重上升较多，建议适当控制饮食' :
+                          stats.change > 0.1 ? '📈 体重略有上升趋势' :
+                          stats.change < -0.5 ? '🎉 本月体重下降明显，继续保持！' :
+                          stats.change < -0.1 ? '📉 体重略有下降' :
+                          '✅ 体重保持稳定，非常棒！';
+
+            summaryEl.innerHTML = `
+                <div style="background:#fefafb;border-radius:12px;padding:16px;border:1px solid var(--border);">
+                    <p style="margin-bottom:8px;">
+                        <strong>${year} 年 ${month} 月</strong> 共记录 <strong>${stats.count}</strong> 天
+                        （记录率 ${recordRate}%）
+                    </p>
+                    <p style="margin-bottom:8px;">
+                        月初 ${stats.first.toFixed(1)} kg → 月末 ${stats.last.toFixed(1)} kg
+                        <span style="color:${stats.change > 0 ? 'var(--red)' : stats.change < 0 ? 'var(--green)' : 'var(--text)'};font-weight:700;">
+                            ${changeSign} ${Math.abs(stats.change).toFixed(1)} kg
+                        </span>
+                    </p>
+                    <p style="margin-bottom:0;padding:10px 14px;background:var(--primary-light);border-radius:10px;color:var(--primary-dark);font-size:14px;">
+                        ${trend}
+                    </p>
+                </div>
+            `;
+        }
+
+        // =============================================
+        // Refresh All
+        // =============================================
+        async function refreshAll() {
+            await loadRecords();
+            renderRecords();
+            renderWeekly();
+            renderMonthly();
+        }
+
+        // =============================================
+        // Tab Switching
+        // =============================================
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.tab).classList.add('active');
+                if (btn.dataset.tab === 'tab-weekly') renderWeekly();
+                if (btn.dataset.tab === 'tab-monthly') renderMonthly();
+            });
+        });
+
+        document.getElementById('month-select').addEventListener('change', renderMonthly);
+
+        // =============================================
+        // Init
+        // =============================================
+        setDefaultDate();
+        populateMonthSelect();
+
+        (async function init() {
+            try {
+                await refreshAll();
+            } catch (e) {
+                document.getElementById('record-list').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">😵</div>
+                        <p>无法连接服务器</p>
+                        <p style="font-size:12px;margin-top:4px;">请确认服务器已启动</p>
+                    </div>
+                `;
+                showToast('❌ 无法连接服务器');
+            }
+        })();
+    </script>
+
+</body>
+</html>
